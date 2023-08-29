@@ -2,7 +2,7 @@ import os
 import sys
 import argparse
 
-def delete_files_with_extension_and_size(folder_path, ext, not_in_ext, max_size_bytes, min_size_bytes):
+def delete_files_with_extension_and_size(folder_path, ext, not_in_ext, not_in_range, max_size_bytes, min_size_bytes):
     try:
         for root, dirs, files in os.walk(folder_path):
             for file in files:
@@ -10,7 +10,12 @@ def delete_files_with_extension_and_size(folder_path, ext, not_in_ext, max_size_
                 if (ext is None or file_ext == ext) and (not_in_ext is None or file_ext != not_in_ext):
                     file_path = os.path.join(root, file)
                     file_size = os.path.getsize(file_path)
-                    if max_size_bytes <= file_size <= min_size_bytes:
+                    if not_in_range:
+                        size_range = parse_size_range(not_in_range)
+                        if file_size < size_range[0] or file_size > size_range[1]:
+                            os.remove(file_path)
+                            print(f"Deleted: {file_path} (Size: {file_size} bytes)")
+                    elif max_size_bytes <= file_size <= min_size_bytes:
                         os.remove(file_path)
                         print(f"Deleted: {file_path} (Size: {file_size} bytes)")
         print("Deletion process completed.")
@@ -28,11 +33,16 @@ def parse_size(size_str):
     else:
         return float(size_str)
 
+def parse_size_range(size_range_str):
+    min_size_str, max_size_str = size_range_str.lower().split('-')
+    return parse_size(min_size_str), parse_size(max_size_str)
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Delete files with specified extension and size")
     parser.add_argument("folder", help="Folder path to filter")
     parser.add_argument("--ext", help="File extension to filter")
     parser.add_argument("--not_in_ext", help="File extension to exclude from deletion")
+    parser.add_argument("--not_in_range", help="File size range to exclude from deletion (e.g., 1KB-10MB)")
     parser.add_argument("--max_size", help="Minimum size for deletion (e.g., 10KB, 20MB, 2GB)")
     parser.add_argument("--min_size", help="Maximum size for deletion (e.g., 10KB, 20MB, 2GB)")
 
@@ -41,6 +51,7 @@ if __name__ == "__main__":
     folder_path = args.folder
     ext = args.ext
     not_in_ext = args.not_in_ext
+    not_in_range = args.not_in_range
     max_size_str = args.max_size
     min_size_str = args.min_size
 
@@ -54,4 +65,4 @@ if __name__ == "__main__":
     else:
         min_size_bytes = float('inf')
 
-    delete_files_with_extension_and_size(folder_path, ext, not_in_ext, max_size_bytes, min_size_bytes)
+    delete_files_with_extension_and_size(folder_path, ext, not_in_ext, not_in_range, max_size_bytes, min_size_bytes)
